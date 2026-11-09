@@ -75,3 +75,44 @@
   height: 10px;
   border-radius: 50%;
 }
+
+.operador {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: 100vh;
+}
+
+.operador__mapa {
+  height: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 800px) {
+  .operador {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .operador__mapa {
+    height: 55vh;
+  }
+}
+
+@media (max-width: 800px) {
+  .leyenda {
+    min-width: 0;
+    max-width: 210px;
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .leyenda__fila {
+    gap: 5px;
+    margin: 1px 0;
+  }
+
+  .leyenda__punto {
+    width: 8px;
+    height: 8px;
+  }
+}

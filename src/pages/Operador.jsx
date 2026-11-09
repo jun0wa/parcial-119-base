@@ -5,6 +5,7 @@ import { useReportes, TRANSICIONES } from '../context/ReportesContext.jsx'
 import { GRUPOS, colorDeGrupo } from '../data/grupos.js'
 
 // Ubicación en el proyecto: src/pages/Operador.jsx
+// Las clases .operador, .operador__mapa y .operador__panel están en src/index.css
 
 const UNIDADES = ['Máquina', 'Rescate', 'Ambulancia', 'HazMat']
 
@@ -30,19 +31,17 @@ export default function Operador() {
   const ordenados = [...reportes].reverse()
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', height: '100vh' }}>
-      <MapaOperador
-        reportes={reportes}
-        seleccionadoId={seleccionadoId}
-        onSeleccionar={setSeleccionadoId}
-      />
+    <div className="operador">
+      {/* El mapa y el panel son HERMANOS: los dos son hijos directos de .operador */}
+      <div className="operador__mapa">
+        <MapaOperador
+          reportes={reportes}
+          seleccionadoId={seleccionadoId}
+          onSeleccionar={setSeleccionadoId}
+        />
+      </div>
 
-      <aside
-        style={{
-          padding: 16, background: '#0f172a', color: '#e2e8f0',
-          overflowY: 'auto', borderLeft: '1px solid #1e293b',
-        }}
-      >
+      <aside className="operador__panel">
         <h2 style={{ marginTop: 0 }}>Radio operador</h2>
 
         {/* ---------- Lista de reportes ---------- */}
