@@ -5,22 +5,31 @@ import './mapa.css'
 import { crearIcono } from './iconos.js'
 import { GRUPOS, colorDeGrupo } from '../data/grupos.js'
 
+// Ubicación en el proyecto: src/mapa/MapaOperador.jsx
+
 const CENTRO_CALI = [3.437, -76.522]
 
-// Asigna clases CSS al pin según el estado del caso: redirige estilos de pulso llamativo ('Recibido') o atenuado ('Cerrado'/'Descartado').
+// Según el estado del reporte, el pin lleva una clase CSS distinta (mapa.css):
+//   Recibido            -> pulsa, para llamar la atención del operador
+//   Cerrado / Descartado -> apagado (gris y con poca opacidad)
+//   Validado / Unidad despachada -> pin normal
 function clasesDePin(estado) {
   if (estado === 'Recibido') return 'pin--pulso'
   if (estado === 'Cerrado' || estado === 'Descartado') return 'pin--apagado'
   return ''
 }
 
-// Mapa interactivo para el operador: dibuja los reportes en Cali y redirige la selección del caso al hacer clic en un pin.
+// Mapa REAL de Cali (OpenStreetMap a través de Leaflet). No necesita API key.
+// Props:
+//   reportes: [{ id, grupo, lat, lng, estado, barrio, nombres, apellidos, queVe }]
+//   seleccionadoId: id del reporte seleccionado (o null)
+//   onSeleccionar: (id) => void
 export default function MapaOperador({ reportes = [], seleccionadoId = null, onSeleccionar }) {
   const seleccionado = reportes.find((r) => r.id === seleccionadoId)
 
   return (
     <MapContainer center={CENTRO_CALI} zoom={13} style={{ width: '100%', height: '100%' }}>
-      {/* Selector de capas: permite conmutar entre mapa de calles diurno (OpenStreetMap) y oscuro (CARTO Dark) */}
+      {/* Dos estilos de mapa: el operador los cambia con el control de la esquina */}
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="Calles (OpenStreetMap)">
           <TileLayer
@@ -36,7 +45,6 @@ export default function MapaOperador({ reportes = [], seleccionadoId = null, onS
         </LayersControl.BaseLayer>
       </LayersControl>
 
-      {/* Renderizado de pines: dibuja cada emergencia y redirige el clic a onSeleccionar() para abrir el detalle */}
       {reportes.map((r) => (
         <Marker
           key={r.id}
@@ -47,7 +55,6 @@ export default function MapaOperador({ reportes = [], seleccionadoId = null, onS
           })}
           eventHandlers={{ click: () => onSeleccionar?.(r.id) }}
         >
-          {/* Popup informativo: muestra los datos esenciales del reporte al hacer clic sobre el pin */}
           <Popup>
             <strong>
               {r.nombres} {r.apellidos}
@@ -68,7 +75,9 @@ export default function MapaOperador({ reportes = [], seleccionadoId = null, onS
   )
 }
 
-// Vuela la cámara hacia las coordenadas exactas del reporte cuando el operador lo selecciona en la lista lateral.
+// Cuando se selecciona un reporte (desde la lista o el mapa), el mapa vuela hasta él.
+// La dependencia es el ID y no el objeto completo: si fuera el objeto, cada cambio de
+// estado (validar, despachar...) crearía un objeto nuevo y el mapa volvería a volar.
 function IrAlSeleccionado({ reporte }) {
   const map = useMap()
   useEffect(() => {
@@ -77,7 +86,7 @@ function IrAlSeleccionado({ reporte }) {
   return null
 }
 
-// Leyenda fija: muestra el total de reportes y el conteo de incidentes por cada grupo de emergencia.
+// Leyenda fija en la esquina inferior izquierda: color y conteo por grupo.
 function Leyenda({ reportes }) {
   return (
     <div className="leaflet-bottom leaflet-left">

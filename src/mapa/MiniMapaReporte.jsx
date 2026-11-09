@@ -5,9 +5,10 @@ import './mapa.css'
 import { crearIcono } from './iconos.js'
 import { BARRIOS } from '../data/barrios.js'
 
+// Ubicación por defecto: Cali
 const CENTRO_CALI = [3.437, -76.522]
 
-// Captura el clic del usuario en el mapa y redirige las coordenadas seleccionadas (lat, lng) hacia el formulario de reporte.
+// Componente que captura el clic en el mapa usando useMapEvents de react-leaflet
 function SelectorPunto({ punto, onPuntoChange, colorPin }) {
   useMapEvents({
     click(e) {
@@ -31,7 +32,7 @@ function SelectorPunto({ punto, onPuntoChange, colorPin }) {
   )
 }
 
-// Escucha el barrio seleccionado en el formulario y redirige la vista del mapa con una animación de vuelo (flyTo) hacia su ubicación.
+// Cuando el usuario elige un barrio en el formulario, el mini mapa vuela hacia él
 function CentrarSegunBarrio({ barrioNombre }) {
   const map = useMap()
 
@@ -46,7 +47,6 @@ function CentrarSegunBarrio({ barrioNombre }) {
   return null
 }
 
-// Mini mapa interactivo que permite georreferenciar la emergencia y redirige los datos al envío del reporte.
 export default function MiniMapaReporte({
   punto = null,
   onPuntoChange,
@@ -55,7 +55,6 @@ export default function MiniMapaReporte({
 }) {
   return (
     <div style={{ marginTop: 14, marginBottom: 12 }}>
-      {/* Encabezado del mapa y botón para limpiar el marcador seleccionado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span style={{ fontSize: 14, fontWeight: 600 }}>
           Punto exacto en el mapa <small style={{ fontWeight: 400, color: '#78716c' }}>(toca el mapa)</small>
@@ -79,7 +78,6 @@ export default function MiniMapaReporte({
         )}
       </div>
 
-      {/* Contenedor Leaflet con OpenStreetMap: integra el centrado por barrio y el selector de coordenadas */}
       <div
         style={{
           height: 240,
@@ -105,34 +103,15 @@ export default function MiniMapaReporte({
         </MapContainer>
       </div>
 
-      {/* Confirmación visual: muestra las coordenadas fijadas que se incluirán en el reporte final */}
-      <div style={{ marginTop: 6, fontSize: 13, color: '#57534e', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ marginTop: 6, fontSize: 13, color: '#57534e' }}>
         {punto ? (
-          <>
-            <img
-              src="/iconos/ubicacion.svg"
-              alt=""
-              width={16}
-              height={16}
-              style={{ verticalAlign: 'middle', flexShrink: 0 }}
-            />
-            <span style={{ color: '#15803d', fontWeight: 600 }}>
-              Coordenadas fijadas: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}
-            </span>
-          </>
+          <span style={{ color: '#15803d', fontWeight: 600 }}>
+            📍 Coordenadas fijadas: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}
+          </span>
         ) : (
-          <>
-            <img
-              src="/iconos/mano.svg"
-              alt=""
-              width={16}
-              height={16}
-              style={{ verticalAlign: 'middle', flexShrink: 0 }}
-            />
-            <span>
-              Haz clic o toca en el mapa para marcar el punto exacto de la emergencia.
-            </span>
-          </>
+          <span>
+            👆 Haz clic o toca en el mapa para marcar el punto exacto de la emergencia.
+          </span>
         )}
       </div>
     </div>

@@ -1,9 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { BARRIOS } from '../data/barrios.js'
 
+// Ubicación en el proyecto: src/context/ReportesContext.jsx
+
 const CLAVE_STORAGE = 'reportes119'
 
-// Matriz de transiciones permitidas: restringe el cambio de estado de cada caso para impedir operaciones inválidas.
+// Flujo permitido: de qué estado a cuáles se puede pasar.
+// Esto es lo que impide "despachar sin validar".
 export const TRANSICIONES = {
     'Recibido': ['Validado', 'Descartado'],
     'Validado': ['Unidad despachada', 'Descartado'],
@@ -14,30 +17,42 @@ export const TRANSICIONES = {
 
 const ReportesContext = createContext(null)
 
-// Lee los reportes almacenados en el navegador y los redirige como valor inicial del estado global.
+// Lee los reportes guardados; si no hay nada (o está dañado), devuelve [].
 function leerReportes() {
     try {
         const guardado = localStorage.getItem(CLAVE_STORAGE)
-        return guardado ? JSON.parse(guardado) : []
+        const lista = guardado ? JSON.parse(guardado) : []
+        // Las URLs "blob:" (fotos con createObjectURL) solo viven mientras la pestaña está abierta.
+        // Esta función corre al cargar la página, cuando ya están muertas: se descartan para no
+        // pedirle al navegador archivos que no existen.
+        return lista.map((r) => ({
+            ...r,
+            fotos: (r.fotos ?? []).filter((f) => !String(f).startsWith('blob:')),
+        }))
     } catch {
         return []
     }
 }
 
-// Proveedor de estado global: centraliza los reportes y sincroniza en tiempo real entre la ciudadanía y el operador.
 export function ReportesProvider({ children }) {
+    // Se pasa una FUNCIÓN a useState: así localStorage se lee solo una vez, al inicio.
     const [reportes, setReportes] = useState(leerReportes)
 
-    // Sincroniza cada actualización de reportes y la redirige a localStorage para persistir los datos.
+    // Cada vez que cambia la lista, se guarda.
     useEffect(() => {
         try {
             localStorage.setItem(CLAVE_STORAGE, JSON.stringify(reportes))
         } catch {
-            // Continúa en memoria si el almacenamiento local está saturado o restringido.
+            // si el almacenamiento está lleno o bloqueado, la app sigue funcionando en memoria
         }
     }, [reportes])
 
-    // Registra un nuevo reporte: prioriza las coordenadas fijadas en el mini mapa y lo redirige a la lista activa.
+    // Crea un reporte nuevo. `datos` viene del formulario del ciudadano:
+    // { nombres, apellidos, telefono, grupo, queVe, direccion, barrio,
+    //   referencia, edificio, fotos, lat?, lng? }
+    // Si el ciudadano marcó un punto en el mapa, vienen lat/lng exactos;
+    // si no, se usan las coordenadas del centro del barrio.
+    // Devuelve el id para poder mostrar la confirmación de ese reporte.
     function agregarReporte(datos) {
         const barrio = BARRIOS.find((b) => b.nombre === datos.barrio)
         const id = Date.now()
@@ -46,10 +61,9 @@ export function ReportesProvider({ children }) {
             ...datos,
             id,
             radicado: `119-${String(id).slice(-6)}`,
-            hora: new Date().toISOString(),
+            hora: new Date().toISOString(), // se formatea al mostrarla
             estado: 'Recibido',
-            grupo: Number(datos.grupo),
-            // Si el ciudadano tocó el mini mapa, se redirige esa coordenada exacta; de lo contrario, usa el centro del barrio.
+            grupo: Number(datos.grupo), // el <select> entrega texto; el mapa compara con números
             lat: datos.lat ?? barrio?.lat,
             lng: datos.lng ?? barrio?.lng,
             fotos: datos.fotos ?? [],
@@ -60,7 +74,11 @@ export function ReportesProvider({ children }) {
         return id
     }
 
-    // Valida y actualiza el estado de un reporte, redirigiendo los cambios al mapa y panel del radio operador.
+    // Cambia el estado de un reporte respetando TRANSICIONES.
+    // `extra` permite guardar datos adicionales, por ejemplo:
+    //   cambiarEstado(id, 'Validado', { grupo: 300 })
+    //   cambiarEstado(id, 'Unidad despachada', { unidad: 'Ambulancia' })
+    // Devuelve true si el cambio se aplicó y false si no estaba permitido.
     function cambiarEstado(id, nuevoEstado, extra = {}) {
         const actual = reportes.find((r) => r.id === id)
         if (!actual || !TRANSICIONES[actual.estado]?.includes(nuevoEstado)) return false
@@ -78,7 +96,7 @@ export function ReportesProvider({ children }) {
     )
 }
 
-// Hook de consumo: expone los reportes y métodos de actualización hacia cualquier pantalla de la aplicación.
+// Hook para usar el contexto en cualquier pantalla.
 export function useReportes() {
     const ctx = useContext(ReportesContext)
     if (!ctx) throw new Error('useReportes debe usarse dentro de <ReportesProvider>')

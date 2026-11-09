@@ -3,19 +3,14 @@ import EscenaLanding from '../three/EscenaLanding.jsx'
 import TarjetaGrupo from '../components/TarjetaGrupo.jsx'
 import { GRUPOS } from '../data/grupos.js'
 
-// Página de inicio: presenta el canal digital de la Línea 119, la baliza 3D interactiva y los accesos principales.
+// Ubicación en el proyecto: src/pages/Landing.jsx
+
 export default function Landing() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Encabezado institucional: presenta la identidad de Bomberos Voluntarios de Cali con ícono representativo */}
+      {/* ---------- Encabezado ---------- */}
       <header style={estilos.encabezado}>
-        <img
-          src="/iconos/bomberos.svg"
-          alt="Bomberos Cali"
-          width={28}
-          height={28}
-          style={{ verticalAlign: 'middle' }}
-        />
+        <span style={{ fontSize: 24 }} aria-hidden="true"></span>
         <div>
           <strong style={{ display: 'block', lineHeight: 1.1 }}>Bomberos Voluntarios de Cali</strong>
           <small style={{ opacity: 0.85 }}>Línea 119</small>
@@ -23,9 +18,10 @@ export default function Landing() {
       </header>
 
       <main style={{ flex: 1 }}>
-        {/* Sección Hero: llamado a la acción, botones de reporte y baliza 3D */}
+        {/* ---------- Hero: llamado + botones + escena 3D ---------- */}
         <section style={estilos.hero}>
           <div style={estilos.heroContenido}>
+            {/* Texto y botones principales de acción */}
             <div>
               <p style={estilos.etiqueta}>CANAL DIGITAL · LÍNEA 119</p>
               <h1 style={estilos.titulo}>¿Tienes una emergencia?</h1>
@@ -34,32 +30,24 @@ export default function Landing() {
                 al instante y te confirmará el estado de tu reporte.
               </p>
 
-              {/* Botones de acción: redirige a la ruta "/reportar" para formulario web o a "tel:119" para llamada directa */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
                 <Link to="/reportar" style={estilos.botonPrimario}>
                   Reportar emergencia
                 </Link>
                 <a href="tel:119" style={estilos.botonSecundario}>
-                  <img
-                    src="/iconos/telefono.svg"
-                    alt=""
-                    width={20}
-                    height={20}
-                    style={{ verticalAlign: 'middle', marginRight: 8 }}
-                  />
                   Llamar al 119
                 </a>
               </div>
             </div>
 
-            {/* Visualizador 3D: renderiza la baliza interactiva y redirige los clics al sonido y destello de alarma */}
+            {/* Escena 3D con el modelo alarm_light.glb */}
             <div style={{ minWidth: 0 }}>
               <EscenaLanding />
             </div>
           </div>
         </section>
 
-        {/* Clasificación de emergencias: muestra los siete grupos con su código y color identificador */}
+        {/* ---------- Tarjetas de los siete grupos ---------- */}
         <section style={estilos.seccion}>
           <h2 style={{ marginTop: 0 }}>¿Qué tipo de emergencia es?</h2>
           <p style={{ color: '#57534e', marginTop: 0 }}>
@@ -73,7 +61,7 @@ export default function Landing() {
         </section>
       </main>
 
-      {/* Pie de página: información legal y enlace que redirige al panel de gestión del radio operador (/operador) */}
+      {/* ---------- Pie de página ---------- */}
       <footer style={estilos.pie}>
         <span>Prototipo académico · datos de prueba ficticios</span>
         <Link to="/operador" style={{ color: '#fca5a5' }}>Acceso radio operador</Link>
@@ -82,6 +70,7 @@ export default function Landing() {
   )
 }
 
+/* ---------- Estilos ---------- */
 const estilos = {
   encabezado: {
     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 24px',
@@ -93,6 +82,7 @@ const estilos = {
   },
   heroContenido: {
     maxWidth: 1100, margin: '0 auto', display: 'grid', alignItems: 'center', gap: 24,
+    // En pantalla ancha: dos columnas. En celular: una sola, apiladas.
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
   },
   etiqueta: { margin: 0, fontSize: 13, letterSpacing: 2, color: '#fca5a5', fontWeight: 700 },
@@ -103,7 +93,6 @@ const estilos = {
     fontWeight: 800, fontSize: 18, textDecoration: 'none',
   },
   botonSecundario: {
-    display: 'inline-flex', alignItems: 'center',
     padding: '16px 28px', borderRadius: 10, border: '2px solid #fff', color: '#fff',
     fontWeight: 700, fontSize: 18, textDecoration: 'none',
   },
