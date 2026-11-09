@@ -1,0 +1,49 @@
+/* Pin con forma de gota, del color del grupo (variable --color) */
+.pin {
+  position: relative;
+  background: var(--color);
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.pin::after {
+  content: '';
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  background: #fff;
+}
+.pin--seleccionado {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6), 0 0 18px var(--color);
+}
+
+/* Animación de pulso YA ESCRITA.
+   TODO (estudiantes): aplicar la clase "pin--pulso" a los reportes en estado Recibido. */
+.pin--pulso::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 3px solid var(--color);
+  animation: pulso 1.4s ease-out infinite;
+}
+@keyframes pulso {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+/* TODO (estudiantes): crear una clase "pin--apagado" (gris, opacidad baja)
+   para los reportes Cerrado o Descartado. */
+
+/* Leyenda y controles sobre el mapa */
+.leyenda {
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: 12px system-ui, sans-serif;
+  min-width: 220px;
+}
+.leyenda__fila { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.leyenda__punto { width: 10px; height: 10px; border-radius: 50%; }
