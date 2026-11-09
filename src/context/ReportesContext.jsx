@@ -21,7 +21,14 @@ const ReportesContext = createContext(null)
 function leerReportes() {
     try {
         const guardado = localStorage.getItem(CLAVE_STORAGE)
-        return guardado ? JSON.parse(guardado) : []
+        const lista = guardado ? JSON.parse(guardado) : []
+        // Las URLs "blob:" (fotos con createObjectURL) solo viven mientras la pestaña está abierta.
+        // Esta función corre al cargar la página, cuando ya están muertas: se descartan para no
+        // pedirle al navegador archivos que no existen.
+        return lista.map((r) => ({
+            ...r,
+            fotos: (r.fotos ?? []).filter((f) => !String(f).startsWith('blob:')),
+        }))
     } catch {
         return []
     }
@@ -42,7 +49,9 @@ export function ReportesProvider({ children }) {
 
     // Crea un reporte nuevo. `datos` viene del formulario del ciudadano:
     // { nombres, apellidos, telefono, grupo, queVe, direccion, barrio,
-    //   referencia, edificio, fotos }
+    //   referencia, edificio, fotos, lat?, lng? }
+    // Si el ciudadano marcó un punto en el mapa, vienen lat/lng exactos;
+    // si no, se usan las coordenadas del centro del barrio.
     // Devuelve el id para poder mostrar la confirmación de ese reporte.
     function agregarReporte(datos) {
         const barrio = BARRIOS.find((b) => b.nombre === datos.barrio)

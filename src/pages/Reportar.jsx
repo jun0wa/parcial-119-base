@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import '../mapa/mapa.css'
+import { crearIcono } from '../mapa/iconos.js'
 import { useReportes } from '../context/ReportesContext.jsx'
 import { GRUPOS, colorDeGrupo } from '../data/grupos.js'
 import { BARRIOS } from '../data/barrios.js'
-import MiniMapaReporte from '../mapa/MiniMapaReporte.jsx'
 
 // Ubicación en el proyecto: src/pages/Reportar.jsx
 
 const MAX_FOTOS = 3
+const CENTRO_CALI = [3.437, -76.522]
+const CLAVE_ULTIMO = 'ultimoReporte119' // id del último reporte enviado desde este navegador
+const MAX_KM_BARRIO = 4 // si el punto queda más lejos que esto de todos los barrios, no se asigna ninguno
 
 const FORM_INICIAL = {
   nombres: '',
@@ -30,16 +36,47 @@ const COLOR_ESTADO = {
   'Descartado': '#64748b',
 }
 
+/* ---------- Cálculo del barrio más cercano ---------- */
+
+// Distancia en km entre dos coordenadas (fórmula de Haversine)
+function distanciaKm(a, b) {
+  const R = 6371
+  const rad = Math.PI / 180
+  const dLat = (b.lat - a.lat) * rad
+  const dLng = (b.lng - a.lng) * rad
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+// Devuelve el barrio de la lista cuyo centro está más cerca del punto,
+// o null si ninguno está a menos de MAX_KM_BARRIO.
+function barrioMasCercano(punto) {
+  let mejor = null
+  let menor = Infinity
+  for (const b of BARRIOS) {
+    const d = distanciaKm(punto, b)
+    if (d < menor) {
+      menor = d
+      mejor = b
+    }
+  }
+  return menor <= MAX_KM_BARRIO ? mejor : null
+}
+
 // Devuelve un objeto con un mensaje por cada campo que tenga error.
 // Si el objeto está vacío, el formulario es válido.
-function validar(f) {
+// `punto` es el lugar marcado en el mapa ({ lat, lng }) o null.
+function validar(f, punto) {
   const e = {}
   if (!f.nombres.trim()) e.nombres = 'Escribe tus nombres.'
   if (!f.apellidos.trim()) e.apellidos = 'Escribe tus apellidos.'
   if (!/^\d{10}$/.test(f.telefono)) e.telefono = 'Debe tener exactamente 10 dígitos, solo números.'
   if (!f.grupo) e.grupo = 'Selecciona el grupo de emergencia.'
   if (!f.queVe.trim()) e.queVe = 'Cuéntanos qué está pasando.'
-  if (!f.direccion.trim()) e.direccion = 'Escribe la dirección.'
+  // La dirección solo es obligatoria si NO se marcó el punto exacto en el mapa
+  if (!punto && !f.direccion.trim()) e.direccion = 'Escribe la dirección o marca el punto en el mapa.'
   if (!f.barrio) e.barrio = 'Selecciona el barrio.'
   if (!f.referencia.trim()) e.referencia = 'Escribe un punto de referencia.'
   if (!f.noAplica && !f.edificio.trim()) {
@@ -54,10 +91,16 @@ export default function Reportar() {
   const [form, setForm] = useState(FORM_INICIAL)
   const [touched, setTouched] = useState({}) // campos que el usuario ya tocó
   const [fotos, setFotos] = useState([]) // URLs temporales de las miniaturas
-  const [puntoExacto, setPuntoExacto] = useState(null) // coordenadas exactas del mini mapa
-  const [idEnviado, setIdEnviado] = useState(null)
+  const [punto, setPunto] = useState(null) // { lat, lng } marcado en el mini mapa
+  const [centroMapa, setCentroMapa] = useState(null) // a dónde acerca el mapa el barrio elegido a mano
+  const [avisoBarrio, setAvisoBarrio] = useState('') // mensaje sobre el barrio asignado automáticamente
+  // El id del último reporte se recuerda en localStorage: si el ciudadano va al operador
+  // y vuelve a /reportar, sigue viendo su confirmación con el estado actualizado.
+  const [idEnviado, setIdEnviado] = useState(
+    () => Number(localStorage.getItem(CLAVE_ULTIMO)) || null
+  )
 
-  const errores = validar(form)
+  const errores = validar(form, punto)
   const cantidadErrores = Object.keys(errores).length
   const hayErrores = cantidadErrores > 0
 
@@ -69,6 +112,13 @@ export default function Reportar() {
     // En el teléfono solo se aceptan dígitos, máximo 10
     const limpio = name === 'telefono' ? value.replace(/\D/g, '').slice(0, 10) : value
     setForm((prev) => ({ ...prev, [name]: limpio }))
+
+    // Si el barrio se elige a mano, el mapa se acerca a esa zona
+    if (name === 'barrio') {
+      const b = BARRIOS.find((x) => x.nombre === value)
+      setCentroMapa(b ? { lat: b.lat, lng: b.lng, n: Date.now() } : null)
+      setAvisoBarrio('')
+    }
   }
 
   function marcarTocado(e) {
@@ -79,6 +129,19 @@ export default function Reportar() {
   function manejarNoAplica(e) {
     const marcado = e.target.checked
     setForm((prev) => ({ ...prev, noAplica: marcado, edificio: marcado ? '' : prev.edificio }))
+  }
+
+  // Al marcar un punto en el mapa, también se asigna el barrio más cercano.
+  // El mapa NO se mueve (solo se mueve cuando el barrio se elige a mano).
+  function elegirPunto(p) {
+    setPunto(p)
+    const cercano = barrioMasCercano(p)
+    if (cercano) {
+      setForm((prev) => ({ ...prev, barrio: cercano.nombre }))
+      setAvisoBarrio(`Barrio asignado: ${cercano.nombre} (el más cercano al punto; puedes cambiarlo).`)
+    } else {
+      setAvisoBarrio('El punto queda lejos de los barrios de la lista: elige el barrio manualmente.')
+    }
   }
 
   // Props comunes de cada campo controlado
@@ -116,22 +179,30 @@ export default function Reportar() {
       telefono: form.telefono,
       grupo: form.grupo,
       queVe: form.queVe.trim(),
-      direccion: form.direccion.trim(),
+      // Si no escribió dirección, la validación garantiza que sí marcó el punto en el mapa
+      direccion:
+        form.direccion.trim() ||
+        `Punto marcado en el mapa (${punto.lat.toFixed(5)}, ${punto.lng.toFixed(5)})`,
       barrio: form.barrio,
       referencia: form.referencia.trim(),
       edificio: form.noAplica ? 'No aplica' : form.edificio.trim(),
       fotos,
-      lat: puntoExacto ? puntoExacto.lat : undefined,
-      lng: puntoExacto ? puntoExacto.lng : undefined,
+      // Coordenadas exactas si marcó el mapa; si no, el Context usa las del barrio
+      lat: punto?.lat,
+      lng: punto?.lng,
     })
+    localStorage.setItem(CLAVE_ULTIMO, String(id))
     setIdEnviado(id)
   }
 
   function nuevoReporte() {
+    localStorage.removeItem(CLAVE_ULTIMO)
     setForm(FORM_INICIAL)
     setTouched({})
     setFotos([])
-    setPuntoExacto(null)
+    setPunto(null)
+    setCentroMapa(null)
+    setAvisoBarrio('')
     setIdEnviado(null)
   }
 
@@ -202,8 +273,12 @@ export default function Reportar() {
               </select>
             </Campo>
 
-            <Campo etiqueta="Dirección" error={errorDe('direccion')}>
-              <input {...propsCampo('direccion')} placeholder="Calle 5 # 10-20" />
+            {/* Obligatoria solo si no se marcó el punto en el mapa */}
+            <Campo etiqueta="Dirección" error={errorDe('direccion')} obligatorio={!punto}>
+              <input
+                {...propsCampo('direccion')}
+                placeholder={punto ? 'Opcional: ya marcaste el punto en el mapa' : 'Calle 5 # 10-20'}
+              />
             </Campo>
 
             <Campo etiqueta="Punto de referencia" error={errorDe('referencia')}>
@@ -211,13 +286,45 @@ export default function Reportar() {
             </Campo>
           </div>
 
-          {/* Mini mapa con useMapEvents para seleccionar la coordenada exacta */}
-          <MiniMapaReporte
-            punto={puntoExacto}
-            onPuntoChange={setPuntoExacto}
-            barrioNombre={form.barrio}
-            colorPin={form.grupo ? colorDeGrupo(Number(form.grupo)) : '#dc2626'}
-          />
+          {/* ---------- Mini mapa: punto exacto ---------- */}
+          <div style={{ margin: '8px 0 12px' }}>
+            <span style={estilos.etiqueta}>
+              Punto exacto en el mapa{' '}
+              <small style={{ fontWeight: 400, color: '#57534e' }}>
+                (si lo marcas, la dirección escrita es opcional y el barrio se completa solo)
+              </small>
+            </span>
+            <div style={{ marginTop: 6 }}>
+              <SelectorPunto
+                punto={punto}
+                onElegir={elegirPunto}
+                color={form.grupo ? colorDeGrupo(Number(form.grupo)) : '#dc2626'}
+                centro={centroMapa}
+              />
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: 14, color: '#57534e' }}>
+              {punto ? (
+                <>
+                  📍 Punto marcado ({punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}){' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPunto(null)
+                      setAvisoBarrio('')
+                    }}
+                    style={estilos.enlaceBoton}
+                  >
+                    Quitar punto
+                  </button>
+                </>
+              ) : (
+                '👆 Haz clic o toca en el mapa para marcar el punto exacto de la emergencia.'
+              )}
+            </p>
+            {avisoBarrio && (
+              <p style={{ margin: '4px 0 0', fontSize: 14, color: '#166534' }}>{avisoBarrio}</p>
+            )}
+          </div>
 
           <Campo etiqueta="¿Qué ve?" error={errorDe('queVe')}>
             <textarea {...propsCampo('queVe')} rows={3} placeholder="Describe lo que está pasando" />
@@ -280,12 +387,52 @@ export default function Reportar() {
   )
 }
 
+/* ---------- Mini mapa para marcar el punto exacto ---------- */
+
+function SelectorPunto({ punto, onElegir, color, centro }) {
+  return (
+    <MapContainer
+      center={CENTRO_CALI}
+      zoom={12}
+      style={{ width: '100%', height: 280, borderRadius: 10, border: '1px solid #d6d3d1' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <ClicEnMapa onElegir={onElegir} />
+      <VolarA centro={centro} />
+      {punto && <Marker position={[punto.lat, punto.lng]} icon={crearIcono(color)} />}
+    </MapContainer>
+  )
+}
+
+// useMapEvents escucha los eventos del mapa; solo funciona dentro de <MapContainer>.
+function ClicEnMapa({ onElegir }) {
+  useMapEvents({
+    click: (e) => onElegir({ lat: e.latlng.lat, lng: e.latlng.lng }),
+  })
+  return null
+}
+
+// Cuando el ciudadano elige un barrio a mano, el mapa se acerca a esa zona.
+// `centro.n` cambia en cada elección, así el efecto corre aunque repita el mismo barrio.
+function VolarA({ centro }) {
+  const map = useMap()
+  useEffect(() => {
+    if (centro) map.flyTo([centro.lat, centro.lng], 15, { duration: 0.6 })
+  }, [centro?.n, map])
+  return null
+}
+
+/* ---------- Componentes de apoyo ---------- */
+
 // Etiqueta + control + mensaje de error. Se reutiliza en todos los campos.
-function Campo({ etiqueta, error, children }) {
+function Campo({ etiqueta, error, obligatorio = true, children }) {
   return (
     <label style={estilos.campo}>
       <span style={estilos.etiqueta}>
-        {etiqueta} <span style={{ color: '#dc2626' }}>*</span>
+        {etiqueta} {obligatorio && <span style={{ color: '#dc2626' }}>*</span>}
       </span>
       {children}
       {error && <span style={estilos.error}>{error}</span>}
@@ -325,12 +472,6 @@ function Confirmacion({ reporte, onNuevo }) {
           {reporte.estado}
         </span>
         <p style={{ marginBottom: 0 }}>{mensajes[reporte.estado]}</p>
-
-        {reporte.lat && reporte.lng && (
-          <p style={{ margin: '14px 0 0', color: '#15803d', fontSize: 13, fontWeight: 600 }}>
-            📍 Coordenadas fijadas: {reporte.lat.toFixed(5)}, {reporte.lng.toFixed(5)}
-          </p>
-        )}
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
@@ -343,14 +484,22 @@ function Confirmacion({ reporte, onNuevo }) {
 
 /* ---------- Estilos ---------- */
 const estilos = {
-  pagina: { maxWidth: 720, margin: '0 auto', padding: 24 },
+  // fontFamily y boxSizing aquí para que la pantalla se vea bien aunque index.css cambie
+  pagina: { maxWidth: 720, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif' },
   enlace: { color: '#b91c1c' },
+  enlaceBoton: {
+    border: 'none', background: 'none', padding: 0, color: '#b91c1c',
+    textDecoration: 'underline', cursor: 'pointer', font: 'inherit',
+  },
   seccion: { border: '1px solid #d6d3d1', borderRadius: 10, padding: 16, margin: '16px 0', background: '#fff' },
   leyenda: { fontWeight: 700, padding: '0 8px' },
   rejilla: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 },
-  campo: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 },
+  campo: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8, minWidth: 0 },
   etiqueta: { fontSize: 14, fontWeight: 600 },
-  input: { width: '100%', padding: 8, borderRadius: 6, border: '1px solid #a8a29e', font: 'inherit' },
+  input: {
+    width: '100%', padding: 8, borderRadius: 6, border: '1px solid #a8a29e',
+    font: 'inherit', boxSizing: 'border-box',
+  },
   error: { color: '#dc2626', fontSize: 13 },
   quitar: {
     position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%',

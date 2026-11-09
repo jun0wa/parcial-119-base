@@ -10,7 +10,7 @@ export default function Landing() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* ---------- Encabezado ---------- */}
       <header style={estilos.encabezado}>
-        <span style={{ fontSize: 24 }} aria-hidden="true">🚒</span>
+        <span style={{ fontSize: 24 }} aria-hidden="true"></span>
         <div>
           <strong style={{ display: 'block', lineHeight: 1.1 }}>Bomberos Voluntarios de Cali</strong>
           <small style={{ opacity: 0.85 }}>Línea 119</small>
@@ -35,7 +35,7 @@ export default function Landing() {
                   Reportar emergencia
                 </Link>
                 <a href="tel:119" style={estilos.botonSecundario}>
-                  📞 Llamar al 119
+                  Llamar al 119
                 </a>
               </div>
             </div>
