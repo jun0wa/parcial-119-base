@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import MapaOperador from '../mapa/MapaOperador.jsx'
 import { useReportes, TRANSICIONES } from '../context/ReportesContext.jsx'
@@ -22,7 +22,7 @@ const formatearHora = (iso) =>
 const nombreDeGrupo = (codigo) => GRUPOS.find((g) => g.codigo === codigo)?.nombre ?? 'Sin clasificar'
 
 export default function Operador() {
-  const { reportes, cambiarEstado, agregarReporte } = useReportes()
+  const { reportes, cambiarEstado } = useReportes()
   const [seleccionadoId, setSeleccionadoId] = useState(null)
 
   const seleccionado = reportes.find((r) => r.id === seleccionadoId)
@@ -44,7 +44,6 @@ export default function Operador() {
         }}
       >
         <h2 style={{ marginTop: 0 }}>Radio operador</h2>
-
 
         {/* ---------- Lista de reportes ---------- */}
         {ordenados.length === 0 ? (
@@ -92,6 +91,17 @@ export default function Operador() {
 function DetalleReporte({ reporte, cambiarEstado }) {
   const [grupo, setGrupo] = useState(reporte.grupo)
   const [unidad, setUnidad] = useState('')
+  const [fotoAmpliada, setFotoAmpliada] = useState(null) // URL de la foto abierta, o null
+
+  // Con la foto abierta, la tecla Esc la cierra
+  useEffect(() => {
+    if (!fotoAmpliada) return
+    const alPulsar = (e) => {
+      if (e.key === 'Escape') setFotoAmpliada(null)
+    }
+    window.addEventListener('keydown', alPulsar)
+    return () => window.removeEventListener('keydown', alPulsar)
+  }, [fotoAmpliada])
 
   // ¿Este reporte puede pasar al estado indicado? (reglas del Context)
   const puede = (estado) => TRANSICIONES[reporte.estado]?.includes(estado)
@@ -129,18 +139,25 @@ function DetalleReporte({ reporte, cambiarEstado }) {
       <Dato etiqueta="Hora" valor={formatearHora(reporte.hora)} />
       {reporte.unidad && <Dato etiqueta="Unidad" valor={reporte.unidad} />}
 
-      {/* Fotos */}
+      {/* Fotos: al hacer clic en una miniatura se abre ampliada */}
       {reporte.fotos?.length > 0 && (
         <div style={{ display: 'flex', gap: 8, margin: '10px 0', flexWrap: 'wrap' }}>
           {reporte.fotos.map((src, i) => (
-            <img
+            <button
               key={i}
-              src={src}
-              alt={`Foto ${i + 1} del reporte`}
-              style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }}
-              // Las URLs temporales dejan de existir al recargar la página
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
-            />
+              onClick={() => setFotoAmpliada(src)}
+              aria-label={`Ampliar foto ${i + 1}`}
+              title="Clic para ampliar"
+              style={{ padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}
+            >
+              <img
+                src={src}
+                alt={`Foto ${i + 1} del reporte`}
+                style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                // Las URLs temporales dejan de existir al recargar la página
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
+              />
+            </button>
           ))}
         </div>
       )}
@@ -215,6 +232,29 @@ function DetalleReporte({ reporte, cambiarEstado }) {
           Cerrar caso
         </button>
       </div>
+
+      {/* ---------- Visor de foto ampliada ---------- */}
+      {fotoAmpliada && (
+        <div
+          onClick={() => setFotoAmpliada(null)}
+          role="dialog"
+          aria-label="Foto ampliada"
+          style={visor}
+        >
+          <img
+            src={fotoAmpliada}
+            alt="Foto ampliada del reporte"
+            style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 8 }}
+          />
+          <button
+            onClick={() => setFotoAmpliada(null)}
+            aria-label="Cerrar foto"
+            style={cerrarVisor}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </section>
   )
 }
@@ -242,3 +282,17 @@ const boton = (color, deshabilitado) => ({
   cursor: deshabilitado ? 'not-allowed' : 'pointer',
   opacity: deshabilitado ? 0.4 : 1,
 })
+
+// El visor tapa toda la pantalla. El z-index es alto para quedar por encima de los controles del mapa.
+const visor = {
+  position: 'fixed', inset: 0, zIndex: 10000,
+  background: 'rgba(0, 0, 0, 0.85)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'zoom-out',
+}
+
+const cerrarVisor = {
+  position: 'absolute', top: 16, right: 16, width: 40, height: 40,
+  borderRadius: '50%', border: 'none', background: '#fff', color: '#0f172a',
+  fontSize: 18, fontWeight: 700, cursor: 'pointer',
+}
