@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Modelo 3D de la baliza / sirena de emergencia (alarm_light.glb)
+// Renderiza el modelo 3D de la baliza, gestiona sus materiales y redirige los eventos de clic a la activación de la alarma.
 export default function ModeloAlarma({ activa = false, onToggle = null }) {
   const groupRef = useRef()
   const beaconGroupRef = useRef()
@@ -11,11 +11,11 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
   const spotLightRef = useRef()
   const spotTarget = useMemo(() => new THREE.Object3D(), [])
 
-  // Cargar modelo y animaciones
+  // Carga las geometrías y animaciones del modelo; redirige la acción de rotación de reflectores a useAnimations.
   const { scene, animations } = useGLTF('/alarm_light.glb')
   const { actions } = useAnimations(animations, groupRef)
 
-  // Clonar la escena y preparar materiales independientes
+  // Clona el modelo para aislar sus propiedades y redirige estilos específicos a la cúpula roja y los bombillos.
   const { modeloClonado, materiales } = useMemo(() => {
     const clon = scene.clone(true)
     const mats = {
@@ -30,7 +30,7 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
         child.material = child.material.clone()
 
         if (child.material.name === 'Material.001') {
-          // Cúpula roja de vidrio
+          // Configura la cúpula roja con transparencia y refracción.
           child.material.transparent = true
           child.material.opacity = 0.82
           child.material.roughness = 0.12
@@ -50,44 +50,44 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
     return { modeloClonado: clon, materiales: mats }
   }, [scene])
 
-  // Configurar el objetivo del reflector
+  // Vincula el foco direccional con el objetivo en movimiento y redirige la trayectoria del haz de luz.
   useEffect(() => {
     if (spotLightRef.current) {
       spotLightRef.current.target = spotTarget
     }
   }, [spotTarget])
 
-  // Controlar la animación de giro de los reflectores internos (Cylinder|CylinderAction)
+  // Controla la velocidad de rotación de los reflectores: redirige a giro rápido si está activa o suave en reposo.
   useEffect(() => {
     const accion = actions?.['Cylinder|CylinderAction']
     if (accion) {
       if (activa) {
         accion.reset().play()
-        accion.timeScale = 2.8 // Giro rápido de emergencia
+        accion.timeScale = 2.8
       } else {
         accion.reset().play()
-        accion.timeScale = 0.35 // Giro suave en espera
+        accion.timeScale = 0.35
       }
     }
   }, [activa, actions])
 
-  // Fotograma a fotograma: destellos y rotación
+  // Bucle de renderizado: modula el destello de la luz roja, el haz exterior y redirige la rotación en cada cuadro.
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime
 
-    // Giro suave continuo para perspectiva 3D
+    // Gira suavemente toda la baliza para exhibirla en 3D.
     if (beaconGroupRef.current) {
       const velGiro = activa ? 2.4 : 0.4
       beaconGroupRef.current.rotation.y += delta * velGiro
     }
 
-    // Reflector giratorio
+    // Calcula el ángulo de giro y redirige la posición del reflector exterior.
     const angulo = t * (activa ? 8.5 : 1.5)
     spotTarget.position.x = Math.sin(angulo) * 4
     spotTarget.position.z = Math.cos(angulo) * 4
 
     if (activa) {
-      // Destello continuo mientras esté activa
+      // Estado encendido: redirige intensidades altas de emisión y destellos a la cúpula y luces puntuales.
       const pulso = Math.sin(t * 16) * 0.5 + 0.5
       const intensidadVidrio = 2.0 + pulso * 2.2
 
@@ -110,7 +110,7 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
         spotLightRef.current.intensity = 22 + pulso * 12
       }
     } else {
-      // Reposo (apagado)
+      // Estado apagado: redirige las luces y emisiones a valores mínimos de reposo.
       if (materiales.glass) {
         materiales.glass.emissive.set('#3a0202')
         materiales.glass.emissiveIntensity = 0.25
@@ -132,11 +132,11 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
     }
   })
 
+  // Estructura visual: detecta clics sobre la baliza y redirige el evento hacia onToggle() para encender/apagar.
   return (
     <group
       ref={groupRef}
       onClick={(e) => {
-        // En R3F onClick solo se dispara si es un clic real, no al arrastrar
         e.stopPropagation()
         if (onToggle) onToggle()
       }}
@@ -150,17 +150,16 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
     >
       <primitive object={spotTarget} />
 
-      {/* Escala natural y centrada para apreciarla completa */}
       <group ref={beaconGroupRef} position={[0, -0.85, 0]} scale={1.0}>
         <primitive object={modeloClonado} />
 
-        {/* Hitbox invisible que cubre toda la baliza para asegurar clics fáciles */}
+        {/* Zona de impacto invisible para asegurar que cualquier toque en la baliza active el evento */}
         <mesh position={[0, 0.85, 0]}>
           <cylinderGeometry args={[1.05, 1.05, 2.3, 16]} />
           <meshBasicMaterial visible={false} />
         </mesh>
 
-        {/* Luz puntual roja en la cúpula */}
+        {/* Luz puntual interior que ilumina la cúpula roja */}
         <pointLight
           ref={pointLightRef}
           position={[0, 0.95, 0]}
@@ -170,7 +169,7 @@ export default function ModeloAlarma({ activa = false, onToggle = null }) {
           decay={2}
         />
 
-        {/* Haz de luz de advertencia */}
+        {/* Luz direccional que proyecta el haz de aviso hacia el exterior */}
         <spotLight
           ref={spotLightRef}
           position={[0, 0.95, 0]}

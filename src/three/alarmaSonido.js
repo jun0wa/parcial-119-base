@@ -1,9 +1,8 @@
-// Sonido de alarma/notificación de emergencia con Web Audio API.
-// Duración fija controlada (2.2 segundos, menor a 3 segundos).
-// Se corta de inmediato si el usuario apaga la baliza antes.
-
+// Inicializa el contexto de Web Audio API y redirige la salida al hardware de sonido del navegador.
 let audioCtx = null
 
+// Genera el sonido de sirena de emergencia (duración fija de 2.2 segundos).
+// Redirige el flujo sonoro a los altavoces y ejecuta el callback al finalizar.
 export function reproducirSonidoAlarma(duracionSegundos = 2.2, onFinalizar = null) {
   try {
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext
@@ -20,27 +19,28 @@ export function reproducirSonidoAlarma(duracionSegundos = 2.2, onFinalizar = nul
     }
 
     const t0 = audioCtx.currentTime
-    // Garantizamos que no exceda 2.5s (menor a 3 segundos)
-    const duracion = Math.min(duracionSegundos, 2.5)
+    const duracion = Math.min(duracionSegundos, 2.5) // Menor a 3 segundos
     const tFin = t0 + duracion
 
+    // Modulación de volumen: aplica rampa suave de entrada y salida para evitar chasquidos.
     const masterGain = audioCtx.createGain()
     masterGain.gain.setValueAtTime(0.0001, t0)
     masterGain.gain.linearRampToValueAtTime(0.3, t0 + 0.05)
     masterGain.gain.setValueAtTime(0.3, Math.max(t0 + 0.1, tFin - 0.15))
     masterGain.gain.exponentialRampToValueAtTime(0.0001, tFin)
 
+    // Filtro acústico: atenúa frecuencias agudas y redirige la señal hacia la ganancia maestra.
     const filter = audioCtx.createBiquadFilter()
     filter.type = 'lowpass'
     filter.frequency.setValueAtTime(2400, t0)
 
+    // Osciladores: modulan la frecuencia cíclica en 3 pulsos para generar el sonido de sirena.
     const osc1 = audioCtx.createOscillator()
     osc1.type = 'sawtooth'
 
     const osc2 = audioCtx.createOscillator()
     osc2.type = 'sine'
 
-    // 3 pulsos continuos y definidos tipo sirena de notificación (0.73s cada uno)
     const periodo = duracion / 3
     for (let i = 0; i < 3; i++) {
       const inicio = t0 + i * periodo
@@ -58,6 +58,7 @@ export function reproducirSonidoAlarma(duracionSegundos = 2.2, onFinalizar = nul
       else osc2.frequency.linearRampToValueAtTime(350, tFin)
     }
 
+    // Enrutamiento de la señal: osciladores -> filtro -> volumen maestro -> altavoces.
     osc1.connect(filter)
     osc2.connect(filter)
     filter.connect(masterGain)
@@ -72,6 +73,7 @@ export function reproducirSonidoAlarma(duracionSegundos = 2.2, onFinalizar = nul
       if (onFinalizar) onFinalizar()
     }, duracion * 1000)
 
+    // Función de corte: silencia y apaga el audio de inmediato si el usuario desactiva la alarma.
     return () => {
       if (timerId) clearTimeout(timerId)
       try {
