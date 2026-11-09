@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useReportes } from '../context/ReportesContext.jsx'
 import { GRUPOS, colorDeGrupo } from '../data/grupos.js'
 import { BARRIOS } from '../data/barrios.js'
+import MiniMapaReporte from '../mapa/MiniMapaReporte.jsx'
 
 // Ubicación en el proyecto: src/pages/Reportar.jsx
 
@@ -53,6 +54,7 @@ export default function Reportar() {
   const [form, setForm] = useState(FORM_INICIAL)
   const [touched, setTouched] = useState({}) // campos que el usuario ya tocó
   const [fotos, setFotos] = useState([]) // URLs temporales de las miniaturas
+  const [puntoExacto, setPuntoExacto] = useState(null) // coordenadas exactas del mini mapa
   const [idEnviado, setIdEnviado] = useState(null)
 
   const errores = validar(form)
@@ -119,6 +121,8 @@ export default function Reportar() {
       referencia: form.referencia.trim(),
       edificio: form.noAplica ? 'No aplica' : form.edificio.trim(),
       fotos,
+      lat: puntoExacto ? puntoExacto.lat : undefined,
+      lng: puntoExacto ? puntoExacto.lng : undefined,
     })
     setIdEnviado(id)
   }
@@ -127,6 +131,7 @@ export default function Reportar() {
     setForm(FORM_INICIAL)
     setTouched({})
     setFotos([])
+    setPuntoExacto(null)
     setIdEnviado(null)
   }
 
@@ -205,6 +210,14 @@ export default function Reportar() {
               <input {...propsCampo('referencia')} placeholder="Frente al parque, junto a la tienda..." />
             </Campo>
           </div>
+
+          {/* Mini mapa con useMapEvents para seleccionar la coordenada exacta */}
+          <MiniMapaReporte
+            punto={puntoExacto}
+            onPuntoChange={setPuntoExacto}
+            barrioNombre={form.barrio}
+            colorPin={form.grupo ? colorDeGrupo(Number(form.grupo)) : '#dc2626'}
+          />
 
           <Campo etiqueta="¿Qué ve?" error={errorDe('queVe')}>
             <textarea {...propsCampo('queVe')} rows={3} placeholder="Describe lo que está pasando" />
@@ -312,6 +325,12 @@ function Confirmacion({ reporte, onNuevo }) {
           {reporte.estado}
         </span>
         <p style={{ marginBottom: 0 }}>{mensajes[reporte.estado]}</p>
+
+        {reporte.lat && reporte.lng && (
+          <p style={{ margin: '14px 0 0', color: '#15803d', fontSize: 13, fontWeight: 600 }}>
+            📍 Coordenadas fijadas: {reporte.lat.toFixed(5)}, {reporte.lng.toFixed(5)}
+          </p>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>

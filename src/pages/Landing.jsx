@@ -21,8 +21,7 @@ export default function Landing() {
         {/* ---------- Hero: llamado + botones + escena 3D ---------- */}
         <section style={estilos.hero}>
           <div style={estilos.heroContenido}>
-            {/* Primero el texto y los botones: así siempre quedan visibles sin hacer scroll,
-                incluso en celular, donde la escena 3D queda debajo */}
+            {/* Texto y botones principales de acción */}
             <div>
               <p style={estilos.etiqueta}>CANAL DIGITAL · LÍNEA 119</p>
               <h1 style={estilos.titulo}>¿Tienes una emergencia?</h1>
@@ -41,6 +40,7 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Escena 3D con el modelo alarm_light.glb */}
             <div style={{ minWidth: 0 }}>
               <EscenaLanding />
             </div>

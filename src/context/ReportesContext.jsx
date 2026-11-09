@@ -55,8 +55,8 @@ export function ReportesProvider({ children }) {
             hora: new Date().toISOString(), // se formatea al mostrarla
             estado: 'Recibido',
             grupo: Number(datos.grupo), // el <select> entrega texto; el mapa compara con números
-            lat: barrio?.lat,
-            lng: barrio?.lng,
+            lat: datos.lat ?? barrio?.lat,
+            lng: datos.lng ?? barrio?.lng,
             fotos: datos.fotos ?? [],
             unidad: null,
         }
