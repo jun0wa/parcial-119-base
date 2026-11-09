@@ -7,6 +7,7 @@
   transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
+
 .pin::after {
   content: '';
   position: absolute;
@@ -14,6 +15,7 @@
   border-radius: 50%;
   background: #fff;
 }
+
 .pin--seleccionado {
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6), 0 0 18px var(--color);
 }
@@ -28,13 +30,28 @@
   border: 3px solid var(--color);
   animation: pulso 1.4s ease-out infinite;
 }
+
 @keyframes pulso {
-  from { transform: scale(0.6); opacity: 1; }
-  to { transform: scale(1.6); opacity: 0; }
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
 }
 
 /* TODO (estudiantes): crear una clase "pin--apagado" (gris, opacidad baja)
    para los reportes Cerrado o Descartado. */
+/* Reportes Cerrado o Descartado: pin gris y casi transparente */
+.pin--apagado {
+  background: #94a3b8;
+  opacity: 0.45;
+  filter: grayscale(1);
+  box-shadow: none;
+}
 
 /* Leyenda y controles sobre el mapa */
 .leyenda {
@@ -45,5 +62,16 @@
   font: 12px system-ui, sans-serif;
   min-width: 220px;
 }
-.leyenda__fila { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-.leyenda__punto { width: 10px; height: 10px; border-radius: 50%; }
+
+.leyenda__fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+}
+
+.leyenda__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
