@@ -4,7 +4,7 @@ import { Suspense, useState, useRef, useEffect } from 'react'
 import ModeloAlarma from './ModeloAlarma.jsx'
 import { reproducirSonidoAlarma } from './alarmaSonido.js'
 
-// Fallback visual mientras carga el modelo
+// Geometría provisional que se muestra mientras se descarga el modelo 3D.
 function CargandoAlarma() {
   return (
     <mesh position={[0, 0, 0]}>
@@ -14,12 +14,13 @@ function CargandoAlarma() {
   )
 }
 
+// Orquesta el lienzo 3D, gestiona el estado de la baliza y redirige las acciones de clic hacia el sonido y la luz.
 export default function EscenaLanding() {
   const [activa, setActiva] = useState(false)
   const sonidoLimpiarRef = useRef(null)
   const autoApagadoRef = useRef(null)
 
-  // Apagar la alarma: silencia el sonido, cancela el timer y apaga la luz
+  // Apaga la baliza: silencia el audio inmediatamente, cancela el temporizador y redirige el estado a inactivo.
   const apagar = () => {
     if (sonidoLimpiarRef.current) {
       sonidoLimpiarRef.current()
@@ -32,7 +33,7 @@ export default function EscenaLanding() {
     setActiva(false)
   }
 
-  // Encender la alarma: reproduce el sonido (2.2s) y programa el auto-apagado a los 8 segundos (7-9s)
+  // Enciende la baliza: activa la iluminación, redirige al sintetizador de audio (2.2s) y programa el auto-apagado a los 8 segundos.
   const encender = () => {
     if (sonidoLimpiarRef.current) {
       sonidoLimpiarRef.current()
@@ -43,17 +44,18 @@ export default function EscenaLanding() {
 
     setActiva(true)
 
-    // Reproducir sonido
+    // Redirige la orden de reproducción a la síntesis de audio de emergencia.
     sonidoLimpiarRef.current = reproducirSonidoAlarma(2.2, () => {
       sonidoLimpiarRef.current = null
     })
 
-    // Se apaga automáticamente a los 8 segundos
+    // Redirige el apagado automático al cumplirse los 8 segundos de actividad.
     autoApagadoRef.current = setTimeout(() => {
       apagar()
     }, 8000)
   }
 
+  // Alterna entre encender o apagar la alarma según el estado actual.
   const alternarAlarma = () => {
     if (activa) {
       apagar()
@@ -62,7 +64,7 @@ export default function EscenaLanding() {
     }
   }
 
-  // Limpieza al desmontar
+  // Cancela temporizadores y corta el audio al desmontar la escena.
   useEffect(() => {
     return () => {
       if (sonidoLimpiarRef.current) sonidoLimpiarRef.current()
@@ -72,6 +74,7 @@ export default function EscenaLanding() {
 
   return (
     <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+      {/* Lienzo Three.js: contiene la cámara con perspectiva lejana (z: 4.5), luces y controles de rotación */}
       <Canvas
         camera={{ position: [0, 1.1, 4.5], fov: 45 }}
         style={{ height: 350, width: '100%' }}
@@ -80,10 +83,12 @@ export default function EscenaLanding() {
         <directionalLight position={[4, 5, 3]} intensity={1.4} />
         <directionalLight position={[-4, 2, -2]} intensity={0.45} color="#fee2e2" />
 
+        {/* Carga el modelo 3D y redirige el clic sobre la baliza hacia alternarAlarma */}
         <Suspense fallback={<CargandoAlarma />}>
           <ModeloAlarma activa={activa} onToggle={alternarAlarma} />
         </Suspense>
 
+        {/* Permite rotar el modelo en 3D libremente sin interferir con los clics */}
         <OrbitControls
           enableZoom={true}
           minDistance={3.0}
@@ -93,6 +98,7 @@ export default function EscenaLanding() {
         />
       </Canvas>
 
+      {/* Indicador inferior: muestra el estado actual mediante imagen de icono usual y redirige el clic a alternarAlarma */}
       <div
         onClick={alternarAlarma}
         style={{
@@ -110,9 +116,33 @@ export default function EscenaLanding() {
         }}
         title="Clic para encender o apagar la alarma"
       >
-        <span style={{ fontSize: 13, color: activa ? '#fca5a5' : '#fee2e2', fontWeight: 600 }}>
-          {activa ? '🚨 Alarma activa · Clic para apagar (auto-apagado en 8s)' : '💡 Clic en la baliza para encender y sonar'}
-        </span>
+        {activa ? (
+          <>
+            <img
+              src="/iconos/sirena.svg"
+              alt=""
+              width={18}
+              height={18}
+              style={{ verticalAlign: 'middle' }}
+            />
+            <span style={{ fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>
+              Alarma activa · Clic para apagar (auto-apagado en 8s)
+            </span>
+          </>
+        ) : (
+          <>
+            <img
+              src="/iconos/bombillo.svg"
+              alt=""
+              width={18}
+              height={18}
+              style={{ verticalAlign: 'middle' }}
+            />
+            <span style={{ fontSize: 13, color: '#fee2e2', fontWeight: 600 }}>
+              Clic en la baliza para encender y sonar
+            </span>
+          </>
+        )}
       </div>
     </div>
   )

@@ -161,10 +161,14 @@ function DetalleReporte({ reporte, cambiarEstado }) {
         </div>
       )}
 
-      <p style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <a href={`tel:${reporte.telefono}`} style={enlace}>📞 Llamar</a>
+      <p style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <a href={`tel:${reporte.telefono}`} style={enlace}>
+          <img src="/iconos/telefono.svg" alt="" width={16} height={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Llamar
+        </a>
         <a href={googleMaps} target="_blank" rel="noreferrer" style={enlace}>
-          🗺️ Ver en Google Maps
+          <img src="/iconos/mapa.svg" alt="" width={16} height={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Ver en Google Maps
         </a>
       </p>
 

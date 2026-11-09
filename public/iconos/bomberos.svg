@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Carrocería principal -->
+  <rect x="2" y="8" width="13" height="9" rx="1.5" fill="#ef4444" stroke="#b91c1c" stroke-width="1.5"/>
+  <!-- Cabina delantera -->
+  <path d="M15 10h4l3 3v4h-7v-7z" fill="#dc2626" stroke="#991b1b" stroke-width="1.5"/>
+  <rect x="16" y="11" width="3" height="3" rx="0.5" fill="#93c5fd"/>
+  <!-- Ruedas -->
+  <circle cx="6" cy="17" r="2.2" fill="#334155" stroke="#0f172a" stroke-width="1.5"/>
+  <circle cx="18" cy="17" r="2.2" fill="#334155" stroke="#0f172a" stroke-width="1.5"/>
+  <!-- Escalera superior -->
+  <path d="M4 6h11M6 6v2M10 6v2M14 6v2" stroke="#fca5a5" stroke-width="1.5"/>
+  <!-- Luz de sirena en techo -->
+  <circle cx="16.5" cy="8.5" r="1.2" fill="#facc15" stroke="#eab308" stroke-width="1"/>
+</svg>
